@@ -2,24 +2,24 @@
 #
 # Summary: Uninstall a specific Python version
 #
-# Usage: pyenv uninstall [-f|--force] <version>
+# Usage: chainenv uninstall [-f|--force] <version>
 #
 #    -f  Attempt to remove the specified version without prompting
 #        for confirmation. If the version does not exist, do not
 #        display an error message.
 #
-# See `pyenv versions` for a complete list of installed versions.
+# See `chainenv versions` for a complete list of installed versions.
 #
 set -e
 
-# Provide pyenv completions
+# Provide chainenv completions
 if [ "$1" = "--complete" ]; then
   echo --force
-  exec pyenv versions --bare
+  exec chainenv versions --bare
 fi
 
 usage() {
-  pyenv-help uninstall 2>/dev/null
+  chainenv-help uninstall 2>/dev/null
   [ -z "$1" ] || exit "$1"
 }
 
@@ -55,21 +55,21 @@ after_uninstall() {
 }
 
 OLDIFS="$IFS"
-IFS=$'\n' scripts=(`pyenv-hooks uninstall`)
+IFS=$'\n' scripts=(`chainenv-hooks uninstall`)
 IFS="$OLDIFS"
 for script in "${scripts[@]}"; do source "$script"; done
 
 
 VERSION_NAME="${DEFINITION##*/}"
-PREFIX="${PYENV_ROOT}/versions/${VERSION_NAME}"
+PREFIX="${CHAINENV_ROOT}/versions/${VERSION_NAME}"
 
 if [ -z "$FORCE" ]; then
   if [ ! -d "$PREFIX" ]; then
-    echo "pyenv: version \`$VERSION_NAME' not installed" >&2
+    echo "chainenv: version \`$VERSION_NAME' not installed" >&2
     exit 1
   fi
 
-  read -p "pyenv: remove $PREFIX? [y|N]"
+  read -p "chainenv: remove $PREFIX? [y|N]"
   case "$REPLY" in
   y | Y | yes | YES ) ;;
   * ) exit 1 ;;
@@ -80,8 +80,8 @@ for hook in "${before_hooks[@]}"; do eval "$hook"; done
 
 if [ -d "$PREFIX" ]; then
   rm -rf "$PREFIX"
-  pyenv-rehash
-  echo "pyenv: $VERSION_NAME uninstalled"
+  chainenv-rehash
+  echo "chainenv: $VERSION_NAME uninstalled"
 fi
 
 for hook in "${after_hooks[@]}"; do eval "$hook"; done

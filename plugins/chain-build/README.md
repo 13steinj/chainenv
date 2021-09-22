@@ -263,7 +263,7 @@ set -x
 docker build -t pyenv-test-container .
 
 git diff --name-only master \
-  | grep '^plugins/python-build/share/python-build/' \
+  | grep '^plugins/chain-build/share/chain-build/' \
   | awk -F '/' '{print $NF}' \
   | xargs -I _ docker run pyenv-test-container pyenv install _
 ```

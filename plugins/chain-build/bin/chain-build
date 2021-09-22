@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Usage: python-build [-kpv] <definition> <prefix>
-#        python-build --definitions
-#        python-build --version
+# Usage: chain-build [-kpv] <definition> <prefix>
+#        chain-build --definitions
+#        chain-build --version
 #
 #   -k/--keep        Do not remove source tree after installation
 #   -p/--patch       Apply a patch from stdin before building
@@ -10,16 +10,16 @@
 #   -4/--ipv4        Resolve names to IPv4 addresses only
 #   -6/--ipv6        Resolve names to IPv6 addresses only
 #   --definitions    List all built-in definitions
-#   --version        Show version of python-build
+#   --version        Show version of chain-build
 #   -g/--debug       Build a debug version
 #
 
-PYTHON_BUILD_VERSION="20180424"
+CHAIN_BUILD_VERSION="20180424"
 
 OLDIFS="$IFS"
 
 set -E
-[ -n "$PYENV_DEBUG" ] && set -x
+[ -n "$CHAINENV_DEBUG" ] && set -x
 
 exec 3<&2 # preserve original stderr at fd 3
 
@@ -332,10 +332,10 @@ http() {
   [ -n "$2" ] || return 1
   shift 1
 
-  PYTHON_BUILD_HTTP_CLIENT="${PYTHON_BUILD_HTTP_CLIENT:-$(detect_http_client)}"
-  [ -n "$PYTHON_BUILD_HTTP_CLIENT" ] || return 1
+  CHAIN_BUILD_HTTP_CLIENT="${CHAIN_BUILD_HTTP_CLIENT:-$(detect_http_client)}"
+  [ -n "$CHAIN_BUILD_HTTP_CLIENT" ] || return 1
 
-  "http_${method}_${PYTHON_BUILD_HTTP_CLIENT}" "$@"
+  "http_${method}_${CHAIN_BUILD_HTTP_CLIENT}" "$@"
 }
 
 detect_http_client() {
@@ -390,9 +390,9 @@ fetch_tarball() {
     checksum="${package_url#*#}"
     package_url="${package_url%%#*}"
 
-    if [ -n "$PYTHON_BUILD_MIRROR_URL" ]; then
-      if [[ -z "$PYTHON_BUILD_DEFAULT_MIRROR" || $package_url != */www.python.org/* ]]; then
-        mirror_url="${PYTHON_BUILD_MIRROR_URL}/$checksum"
+    if [ -n "$CHAIN_BUILD_MIRROR_URL" ]; then
+      if [[ -z "$CHAIN_BUILD_DEFAULT_MIRROR" || $package_url != */www.python.org/* ]]; then
+        mirror_url="${CHAIN_BUILD_MIRROR_URL}/$checksum"
       fi
     fi
   fi
@@ -473,8 +473,8 @@ reuse_existing_tarball() {
   fi
 
   # Reuse previously downloaded file in cache location
-  [ -n "$PYTHON_BUILD_CACHE_PATH" ] || return 1
-  local cached_package_filename="${PYTHON_BUILD_CACHE_PATH}/$package_filename"
+  [ -n "$CHAIN_BUILD_CACHE_PATH" ] || return 1
+  local cached_package_filename="${CHAIN_BUILD_CACHE_PATH}/$package_filename"
 
   [ -e "$cached_package_filename" ] || return 1
   verify_checksum "$cached_package_filename" "$checksum" >&4 2>&1 || return 1
@@ -483,8 +483,8 @@ reuse_existing_tarball() {
 
 download_tarball() {
   local official_source="www.python.org/ftp/python"
-  if [ -n "$PYTHON_BUILD_MIRROR_URL_SKIP_CHECKSUM" ]; then
-      local package_url="$(echo "$1" | sed -e "s|.*//${URL_BASE:-$official_source}|$PYTHON_BUILD_MIRROR_URL|g")"
+  if [ -n "$CHAIN_BUILD_MIRROR_URL_SKIP_CHECKSUM" ]; then
+      local package_url="$(echo "$1" | sed -e "s|.*//${URL_BASE:-$official_source}|$CHAIN_BUILD_MIRROR_URL|g")"
   else
       local package_url="$1"
   fi
@@ -502,8 +502,8 @@ download_tarball() {
     return 1
   fi
 
-  if [ -n "$PYTHON_BUILD_CACHE_PATH" ]; then
-    local cached_package_filename="${PYTHON_BUILD_CACHE_PATH}/$package_filename"
+  if [ -n "$CHAIN_BUILD_CACHE_PATH" ]; then
+    local cached_package_filename="${CHAIN_BUILD_CACHE_PATH}/$package_filename"
     { mv "$package_filename" "$cached_package_filename"
       ln -s "$cached_package_filename" "$package_filename"
     } >&4 2>&1 || return 1
@@ -522,8 +522,8 @@ fetch_git() {
   echo "Cloning ${git_url}..." >&2
 
   if type git &>/dev/null; then
-    if [ -n "$PYTHON_BUILD_CACHE_PATH" ]; then
-      pushd "$PYTHON_BUILD_CACHE_PATH" >&4
+    if [ -n "$CHAIN_BUILD_CACHE_PATH" ]; then
+      pushd "$CHAIN_BUILD_CACHE_PATH" >&4
       local clone_name="$(sanitize "$git_url")"
       if [ -e "${clone_name}" ]; then
         { cd "${clone_name}"
@@ -532,7 +532,7 @@ fetch_git() {
       else
         git clone --bare --branch "$git_ref" "$git_url" "${clone_name}" >&4 2>&1
       fi
-      git_url="$PYTHON_BUILD_CACHE_PATH/${clone_name}"
+      git_url="$CHAIN_BUILD_CACHE_PATH/${clone_name}"
       popd >&4
     fi
 
@@ -558,8 +558,8 @@ fetch_hg() {
   echo "Cloning ${hg_url}..." >&2
 
   if type hg &>/dev/null; then
-    if [ -n "$PYTHON_BUILD_CACHE_PATH" ]; then
-      pushd "$PYTHON_BUILD_CACHE_PATH" >&4
+    if [ -n "$CHAIN_BUILD_CACHE_PATH" ]; then
+      pushd "$CHAIN_BUILD_CACHE_PATH" >&4
       local clone_name="$(sanitize "$hg_url")"
       if [ -e "${clone_name}" ]; then
         { cd "${clone_name}"
@@ -571,7 +571,7 @@ fetch_hg() {
           hg update null
         } >&4 2>&1
       fi
-      hg_url="$PYTHON_BUILD_CACHE_PATH/${clone_name}"
+      hg_url="$CHAIN_BUILD_CACHE_PATH/${clone_name}"
       popd >&4
     fi
 
@@ -609,8 +609,8 @@ fetch_jar() {
     checksum="${package_url#*#}"
     package_url="${package_url%%#*}"
 
-    if [ -n "$PYTHON_BUILD_MIRROR_URL" ]; then
-      mirror_url="${PYTHON_BUILD_MIRROR_URL}/$checksum"
+    if [ -n "$CHAIN_BUILD_MIRROR_URL" ]; then
+      mirror_url="${CHAIN_BUILD_MIRROR_URL}/$checksum"
     fi
   fi
 
@@ -645,8 +645,8 @@ fetch_zip() {
     checksum="${package_url#*#}"
     package_url="${package_url%%#*}"
 
-    if [ -n "$PYTHON_BUILD_MIRROR_URL" ]; then
-      mirror_url="${PYTHON_BUILD_MIRROR_URL}/$checksum"
+    if [ -n "$CHAIN_BUILD_MIRROR_URL" ]; then
+      mirror_url="${CHAIN_BUILD_MIRROR_URL}/$checksum"
     fi
   fi
 
@@ -679,8 +679,8 @@ fetch_script() {
     checksum="${package_url#*#}"
     package_url="${package_url%%#*}"
 
-    if [ -n "$PYTHON_BUILD_MIRROR_URL" ]; then
-      mirror_url="${PYTHON_BUILD_MIRROR_URL}/$checksum"
+    if [ -n "$CHAIN_BUILD_MIRROR_URL" ]; then
+      mirror_url="${CHAIN_BUILD_MIRROR_URL}/$checksum"
     fi
   fi
 
@@ -1091,7 +1091,7 @@ require_gcc() {
   if [ -z "$gcc" ]; then
     { echo
       colorize 1 "ERROR"
-      echo ": This package must be compiled with GCC, but python-build couldn't"
+      echo ": This package must be compiled with GCC, but chain-build couldn't"
       echo "find a suitable \`gcc\` executable on your system. Please install GCC"
       echo "and try again."
       echo
@@ -1239,7 +1239,7 @@ require_java() {
   if [ -z "$java" ]; then
     { echo
       colorize 1 "ERROR"
-      echo ": This package must be installed with java, but python-build couldn't"
+      echo ": This package must be installed with java, but chain-build couldn't"
       echo "find a suitable \`java\` executable on your system. Please install Java"
       echo "and try again."
       echo
@@ -1318,7 +1318,7 @@ needs_yaml() {
 use_homebrew_yaml() {
   local libdir="$(brew --prefix libyaml 2>/dev/null || true)"
   if [ -d "$libdir" ]; then
-    echo "python-build: use libyaml from homebrew"
+    echo "chain-build: use libyaml from homebrew"
     export CPPFLAGS="-I$libdir/include ${CPPFLAGS}"
     export LDFLAGS="-L$libdir/lib ${LDFLAGS}"
   else
@@ -1352,7 +1352,7 @@ use_freebsd_pkg() {
 
 has_broken_mac_readline() {
   # Mac OS X 10.4 has broken readline.
-  # https://github.com/pyenv/pyenv/issues/23
+  # https://github.com/chainenv/chainenv/issues/23
   is_mac &&
   ! configured_with_package_dir "python" "readline/rlconf.h" &&
   ! use_homebrew_readline
@@ -1362,7 +1362,7 @@ use_homebrew_readline() {
   if ! configured_with_package_dir "python" "readline/rlconf.h"; then
     local libdir="$(brew --prefix readline 2>/dev/null || true)"
     if [ -d "$libdir" ]; then
-      echo "python-build: use readline from homebrew"
+      echo "chain-build: use readline from homebrew"
       export CPPFLAGS="-I$libdir/include ${CPPFLAGS}"
       export LDFLAGS="-L$libdir/lib ${LDFLAGS}"
     else
@@ -1373,8 +1373,8 @@ use_homebrew_readline() {
 
 prefer_openssl11() {
   # Allow overriding the preference of OpenSSL version per definition basis (#1302, #1325, #1326)
-  PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA="${PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA:-openssl@1.1 openssl}"
-  export PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA
+  CHAIN_BUILD_HOMEBREW_OPENSSL_FORMULA="${CHAIN_BUILD_HOMEBREW_OPENSSL_FORMULA:-openssl@1.1 openssl}"
+  export CHAIN_BUILD_HOMEBREW_OPENSSL_FORMULA
 }
 
 build_package_mac_readline() {
@@ -1400,11 +1400,11 @@ has_broken_mac_openssl() {
 
 use_homebrew_openssl() {
   command -v brew >/dev/null || return 1
-  for openssl in ${PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA:-openssl}; do
+  for openssl in ${CHAIN_BUILD_HOMEBREW_OPENSSL_FORMULA:-openssl}; do
     local ssldir="$(brew --prefix "${openssl}" || true)"
     if [ -d "$ssldir" ]; then
-      echo "python-build: use ${openssl} from homebrew"
-      if [[ -n "${PYTHON_BUILD_CONFIGURE_WITH_OPENSSL:-}" ]]; then
+      echo "chain-build: use ${openssl} from homebrew"
+      if [[ -n "${CHAIN_BUILD_CONFIGURE_WITH_OPENSSL:-}" ]]; then
         # configure script of newer CPython versions support `--with-openssl`
         # https://bugs.python.org/issue21541
         package_option python configure --with-openssl="${ssldir}"
@@ -1423,11 +1423,11 @@ build_package_mac_openssl() {
   # Install to a subdirectory since we don't want shims for bin/openssl.
   OPENSSL_PREFIX_PATH="${PREFIX_PATH}/openssl"
 
-  # Put openssl.conf, certs, etc in ~/.pyenv/versions/*/openssl/ssl
+  # Put openssl.conf, certs, etc in ~/.chainenv/versions/*/openssl/ssl
   OPENSSLDIR="${OPENSSLDIR:-$OPENSSL_PREFIX_PATH/ssl}"
 
   # Tell Python to use this openssl for its extension.
-  if [[ -n "${PYTHON_BUILD_CONFIGURE_WITH_OPENSSL:-}" ]]; then
+  if [[ -n "${CHAIN_BUILD_CONFIGURE_WITH_OPENSSL:-}" ]]; then
     # configure script of newer CPython versions support `--with-openssl`
     # https://bugs.python.org/issue21541
     package_option python configure --with-openssl="${OPENSSL_PREFIX_PATH}"
@@ -1500,7 +1500,7 @@ build_package_verify_openssl() {
 use_homebrew_zlib() {
   local brew_zlib="$(brew --prefix zlib 2>/dev/null || true)"
   if [ -d "$brew_zlib" ]; then
-    echo "python-build: use zlib from homebrew"
+    echo "chain-build: use zlib from homebrew"
     export CFLAGS="-I${brew_zlib} ${CFLAGS}"
   fi
 }
@@ -1508,7 +1508,7 @@ use_homebrew_zlib() {
 use_xcode_sdk_zlib() {
   local xc_sdk_path="$(xcrun --show-sdk-path 2>/dev/null || true)"
   if [ -d "$xc_sdk_path" ]; then
-    echo "python-build: use zlib from xcode sdk"
+    echo "chain-build: use zlib from xcode sdk"
     export CFLAGS="-I${xc_sdk_path}/usr/include ${CFLAGS}"
     if is_mac -ge 1100; then
       export LDFLAGS="${LDFLAGS} -L${xc_sdk_path}/usr/lib"
@@ -1594,9 +1594,9 @@ verify_python() {
     { colorize 1 "ERROR"
       echo ": invalid Python executable: ${PYTHON_BIN}"
       echo
-      echo "The python-build could not find proper executable of Python after successful build."
+      echo "The chain-build could not find proper executable of Python after successful build."
       echo "Please open an issue for future improvements."
-      echo "https://github.com/pyenv/pyenv/issues"
+      echo "https://github.com/chainenv/chainenv/issues"
       return 1
     } >&3
   fi
@@ -1617,7 +1617,7 @@ verify_python_module() {
       echo ": The Python $1 extension was not compiled. Missing the ${2:-$1}?"
       echo
       echo "Please consult to the Wiki page to fix the problem."
-      echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
+      echo "https://github.com/chainenv/chainenv/wiki/Common-build-problems"
       echo
       return 1
     } >&3
@@ -1815,12 +1815,12 @@ build_package_ensurepip() {
 
 version() {
   local git_revision
-  # Read the revision from git if the remote points to "python-build" repository
-  if GIT_DIR="$PYTHON_BUILD_INSTALL_PREFIX/../../.git" git remote -v 2>/dev/null | grep -q /pyenv; then
-    git_revision="$(GIT_DIR="$PYTHON_BUILD_INSTALL_PREFIX/../../.git" git describe --tags HEAD 2>/dev/null || true)"
+  # Read the revision from git if the remote points to "chain-build" repository
+  if GIT_DIR="$CHAIN_BUILD_INSTALL_PREFIX/../../.git" git remote -v 2>/dev/null | grep -q /chainenv; then
+    git_revision="$(GIT_DIR="$CHAIN_BUILD_INSTALL_PREFIX/../../.git" git describe --tags HEAD 2>/dev/null || true)"
     git_revision="${git_revision#v}"
   fi
-  echo "python-build ${git_revision:-$PYTHON_BUILD_VERSION}"
+  echo "chain-build ${git_revision:-$CHAIN_BUILD_VERSION}"
 }
 
 usage() {
@@ -1828,11 +1828,17 @@ usage() {
   [ -z "$1" ] || exit "$1"
 }
 
+list_git_versions() {
+  git -C $GCC_GIT_REPO_DIR tag -l --sort=-creatordate "$1*" | sed -e "s#^$1/##"
+}
+
 list_definitions() {
-  { for DEFINITION_DIR in "${PYTHON_BUILD_DEFINITIONS[@]}"; do
-      [ -d "$DEFINITION_DIR" ] && ls "$DEFINITION_DIR" | grep -xv patches
-    done
-  } | sort_versions | uniq
+  ensure_repo
+  list_git_versions $GCC_GIT_REPO_TAG_PREFIX
+#  { for DEFINITION_DIR in "${CHAIN_BUILD_DEFINITIONS[@]}"; do
+#      [ -d "$DEFINITION_DIR" ] && ls "$DEFINITION_DIR" | grep -xv patches
+#    done
+#  } | sort_versions | uniq
 }
 
 sort_versions() {
@@ -1848,10 +1854,21 @@ unset DEBUG
 unset IPV4
 unset IPV6
 
-PYTHON_BUILD_INSTALL_PREFIX="$(abs_dirname "$0")/.."
+CHAIN_BUILD_INSTALL_PREFIX="$(abs_dirname "$0")/.."
 
-IFS=: PYTHON_BUILD_DEFINITIONS=($PYTHON_BUILD_DEFINITIONS ${PYTHON_BUILD_ROOT:-$PYTHON_BUILD_INSTALL_PREFIX}/share/python-build)
+IFS=: CHAIN_BUILD_DEFINITIONS=($CHAIN_BUILD_DEFINITIONS ${CHAIN_BUILD_ROOT:-$CHAIN_BUILD_INSTALL_PREFIX}/share/chain-build)
+IFS=: GCC_GIT_REPO_DIR=($GCC_GIT_REPO ${CHAIN_BUILD_ROOT:-$CHAIN_BUILD_INSTALL_PREFIX}/share/chain-build-gcc)
 IFS="$OLDIFS"
+GCC_GIT_REPO="git://gcc.gnu.org/git/gcc.git"
+GCC_GIT_REPO_TAG_PREFIX="releases"
+
+ensure_repo() {
+  if [ ! -d "${GCC_GIT_REPO_DIR[@]}" ]; then
+    git clone $GCC_GIT_REPO "${GCC_GIT_REPO_DIR[@]}"
+  else
+    git -C "${GCC_GIT_REPO_DIR[@]}" fetch --all --tags
+  fi
+}
 
 parse_options "$@"
 
@@ -1895,23 +1912,34 @@ done
 
 [ "${#ARGUMENTS[@]}" -eq 2 ] || usage 1 >&2
 
-DEFINITION_PATH="${ARGUMENTS[0]}"
-if [ -z "$DEFINITION_PATH" ]; then
-  usage 1 >&2
-elif [ ! -f "$DEFINITION_PATH" ]; then
-  for DEFINITION_DIR in "${PYTHON_BUILD_DEFINITIONS[@]}"; do
-    if [ -f "${DEFINITION_DIR}/${DEFINITION_PATH}" ]; then
-      DEFINITION_PATH="${DEFINITION_DIR}/${DEFINITION_PATH}"
-      break
-    fi
-  done
+RELEASE="${ARGUMENTS[0]}"
+GIT_TAG_RELEASE="releases/${RELEASE}"
+RELEASE_SUFFIX="${ARGUMENTS[0]#*-}"
 
-  if [ ! -f "$DEFINITION_PATH" ]; then
-    echo "python-build: definition not found: ${DEFINITION_PATH}" >&2
-    exit 2
-  fi
+if [ -z $(list_git_versions "$GIT_TAG_RELEASE") ]; then
+  echo "chain-build: definition not found: ${GIT_TAG_RELEASE}" >&2
+  exit 2
 fi
 
+#
+#DEFINITION_PATH="${ARGUMENTS[0]}"
+#if [ -z "$DEFINITION_PATH" ]; then
+#  usage 1 >&2
+#elif [ ! -f "$DEFINITION_PATH" ]; then
+#  for DEFINITION_DIR in "${CHAIN_BUILD_DEFINITIONS[@]}"; do
+#    if [ -f "${DEFINITION_DIR}/${DEFINITION_PATH}" ]; then
+#      DEFINITION_PATH="${DEFINITION_DIR}/${DEFINITION_PATH}"
+#      break
+#    fi
+#  done
+#
+#
+#  if [ ! -f "$DEFINITION_PATH" ]; then
+#    echo "chain-build: definition not found: ${DEFINITION_PATH}" >&2
+#    exit 2
+#  fi
+#fi
+#
 PREFIX_PATH="${ARGUMENTS[1]}"
 if [ -z "$PREFIX_PATH" ]; then
   usage 1 >&2
@@ -1926,7 +1954,7 @@ else
 fi
 
 # Check if TMPDIR is accessible and can hold executables.
-tmp_executable="${TMP}/python-build-test.$$"
+tmp_executable="${TMP}/chain-build-test.$$"
 noexec=""
 if mkdir -p "$TMP" && touch "$tmp_executable" 2>/dev/null; then
   cat > "$tmp_executable" <<-EOF
@@ -1935,13 +1963,13 @@ if mkdir -p "$TMP" && touch "$tmp_executable" 2>/dev/null; then
 	EOF
   chmod +x "$tmp_executable"
 else
-  echo "python-build: TMPDIR=$TMP is set to a non-accessible location" >&2
+  echo "chain-build: TMPDIR=$TMP is set to a non-accessible location" >&2
   exit 1
 fi
 "$tmp_executable" 2>/dev/null || noexec=1
 rm -f "$tmp_executable"
 if [ -n "$noexec" ]; then
-  echo "python-build: TMPDIR=$TMP cannot hold executables (partition possibly mounted with \`noexec\`)" >&2
+  echo "chain-build: TMPDIR=$TMP cannot hold executables (partition possibly mounted with \`noexec\`)" >&2
   exit 1
 fi
 
@@ -1961,41 +1989,64 @@ if [ -z "$MAKE" ]; then
   fi
 fi
 
-if [ -n "$PYTHON_BUILD_CACHE_PATH" ] && [ -d "$PYTHON_BUILD_CACHE_PATH" ]; then
-  PYTHON_BUILD_CACHE_PATH="${PYTHON_BUILD_CACHE_PATH%/}"
+if [ -n "$CHAIN_BUILD_CACHE_PATH" ] && [ -d "$CHAIN_BUILD_CACHE_PATH" ]; then
+  CHAIN_BUILD_CACHE_PATH="${CHAIN_BUILD_CACHE_PATH%/}"
 else
-  unset PYTHON_BUILD_CACHE_PATH
+  unset CHAIN_BUILD_CACHE_PATH
 fi
 
-if [ -z "$PYTHON_BUILD_MIRROR_URL" ]; then
-  PYTHON_BUILD_MIRROR_URL="https://pyenv.github.io/pythons"
-  PYTHON_BUILD_DEFAULT_MIRROR=1
+if [ -z "$CHAIN_BUILD_MIRROR_URL" ]; then
+  CHAIN_BUILD_MIRROR_URL="https://chainenv.github.io/pythons"
+  CHAIN_BUILD_DEFAULT_MIRROR=1
 else
-  PYTHON_BUILD_MIRROR_URL="${PYTHON_BUILD_MIRROR_URL%/}"
-  PYTHON_BUILD_DEFAULT_MIRROR=
+  CHAIN_BUILD_MIRROR_URL="${CHAIN_BUILD_MIRROR_URL%/}"
+  CHAIN_BUILD_DEFAULT_MIRROR=
 fi
 
-if [ -n "$PYTHON_BUILD_SKIP_MIRROR" ]; then
-  unset PYTHON_BUILD_MIRROR_URL
+if [ -n "$CHAIN_BUILD_SKIP_MIRROR" ]; then
+  unset CHAIN_BUILD_MIRROR_URL
 fi
 
-if ! has_checksum_support compute_sha2 && ! [ -n "$PYTHON_BUILD_MIRROR_URL_SKIP_CHECKSUM" ] ; then
-  unset PYTHON_BUILD_MIRROR_URL
+if ! has_checksum_support compute_sha2 && ! [ -n "$CHAIN_BUILD_MIRROR_URL_SKIP_CHECKSUM" ] ; then
+  unset CHAIN_BUILD_MIRROR_URL
 fi
 
-ARIA2_OPTS="${PYTHON_BUILD_ARIA2_OPTS} ${IPV4+--disable-ipv6=true} ${IPV6+--disable-ipv6=false}"
-CURL_OPTS="${PYTHON_BUILD_CURL_OPTS} ${IPV4+--ipv4} ${IPV6+--ipv6}"
-WGET_OPTS="${PYTHON_BUILD_WGET_OPTS} ${IPV4+--inet4-only} ${IPV6+--inet6-only}"
+ARIA2_OPTS="${CHAIN_BUILD_ARIA2_OPTS} ${IPV4+--disable-ipv6=true} ${IPV6+--disable-ipv6=false}"
+CURL_OPTS="${CHAIN_BUILD_CURL_OPTS} ${IPV4+--ipv4} ${IPV6+--ipv6}"
+WGET_OPTS="${CHAIN_BUILD_WGET_OPTS} ${IPV4+--inet4-only} ${IPV6+--inet6-only}"
 
+if [ "/tmp" = "$TMP" ]; then
+  TMP=$(mktemp -d)
+  cd "$TMP"
+fi
+
+git -C $GCC_GIT_REPO_DIR checkout "$GIT_TAG_RELEASE"
+
+# this script needs to be run in the GCC directory, oddly. Not mentioned in installation instructions.
+pushd "$GCC_GIT_REPO_DIR"
+./contrib/download_prerequisites
+popd
+
+$GCC_GIT_REPO_DIR/configure \
+  --enable-shared \
+  --prefix="${CHAINENV_ROOT}/versions/${RELEASE}"
+#  --disable-multilib --disable-bootstrap \
+#  --program-suffix="-$RELEASE_SUFFIX" \
+
+# actually build GCC. Note, I don't care how powerful you think your computer is. It'll take a long time. also note:
+# the makefile is weird. These commands need to be separate, even if targets are assumed to be mutually exclusive
+make -j && make install && make clean
+
+exit
 # Add an option to build a debug version of Python (#11)
 if [ -n "$DEBUG" ]; then
   package_option python configure --with-pydebug
 fi
 
-# python-build: Specify `--libdir` on configure to fix build on openSUSE (#36)
+# chain-build: Specify `--libdir` on configure to fix build on openSUSE (#36)
 package_option python configure --libdir="${PREFIX_PATH}/lib"
 
-# python-build: Set `RPATH` if `--enable-shared` was given (#65, #66, #82)
+# chain-build: Set `RPATH` if `--enable-shared` was given (#65, #66, #82)
 if [[ "$CONFIGURE_OPTS" == *"--enable-shared"* ]] || [[ "$PYTHON_CONFIGURE_OPTS" == *"--enable-shared"* ]]; then
   # The ld on Darwin embeds the full paths to each dylib by default
   if [[ "$LDFLAGS" != *"-rpath="* ]] && ! is_mac; then
@@ -2003,7 +2054,7 @@ if [[ "$CONFIGURE_OPTS" == *"--enable-shared"* ]] || [[ "$PYTHON_CONFIGURE_OPTS"
   fi
 fi
 
-# python-build: Set `RPATH` if --shared` was given for PyPy (#244)
+# chain-build: Set `RPATH` if --shared` was given for PyPy (#244)
 if [[ "$PYPY_OPTS" == *"--shared"* ]]; then
   export LDFLAGS="-Wl,-rpath=${PREFIX_PATH}/lib ${LDFLAGS}"
 fi
@@ -2011,7 +2062,7 @@ fi
 # Add support for framework installation (`--enable-framework`) of CPython (#55, #99)
 if [[ "$PYTHON_CONFIGURE_OPTS" == *"--enable-framework"* ]]; then
   if ! is_mac; then
-    echo "python-build: framework installation is not supported." >&2
+    echo "chain-build: framework installation is not supported." >&2
     exit 1
   fi
   create_framework_dirs() {
@@ -2032,7 +2083,7 @@ fi
 # Build against universal SDK (#219, #220)
 if [[ "$PYTHON_CONFIGURE_OPTS" == *"--enable-universalsdk"* ]]; then
   if ! is_mac; then
-    echo "python-build: universal installation is not supported." >&2
+    echo "chain-build: universal installation is not supported." >&2
     exit 1
   fi
   package_option python configure --enable-universalsdk=/ --with-universal-archs=intel
@@ -2156,14 +2207,14 @@ python_bin_suffix() {
 }
 
 SEED="$(date "+%Y%m%d%H%M%S").$$"
-LOG_PATH="${TMP}/python-build.${SEED}.log"
+LOG_PATH="${TMP}/chain-build.${SEED}.log"
 PYTHON_BIN="${PREFIX_PATH}/bin/python$(python_bin_suffix "${DEFINITION_PATH##*/}")"
 CWD="$(pwd)"
 
-if [ -z "$PYTHON_BUILD_BUILD_PATH" ]; then
-  BUILD_PATH="${TMP}/python-build.${SEED}"
+if [ -z "$CHAIN_BUILD_BUILD_PATH" ]; then
+  BUILD_PATH="${TMP}/chain-build.${SEED}"
 else
-  BUILD_PATH="$PYTHON_BUILD_BUILD_PATH"
+  BUILD_PATH="$CHAIN_BUILD_BUILD_PATH"
 fi
 
 exec 4<> "$LOG_PATH" # open the log file at fd 4

@@ -4,7 +4,7 @@ Written for python 3.7.
 
 Checks the miniconda download archives for new versions,
 then writes a build script for any which do not exist locally,
-saving it to plugins/python-build/share/python-build.
+saving it to plugins/chain-build/share/chain-build.
 
 Ignores releases below 4.3.30.
 Also ignores sub-patch releases if that major.minor.patch already exists,
@@ -49,7 +49,7 @@ install_line_fmt = """
 """.strip()
 
 here = Path(__file__).resolve()
-out_dir: Path = here.parent.parent / "share" / "python-build"
+out_dir: Path = here.parent.parent / "share" / "chain-build"
 
 
 class StrEnum(str, Enum):

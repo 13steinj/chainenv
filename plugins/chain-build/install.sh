@@ -1,7 +1,7 @@
 #!/bin/sh
 # Usage: PREFIX=/usr/local ./install.sh
 #
-# Installs python-build under $PREFIX.
+# Installs chain-build under $PREFIX.
 
 set -e
 
@@ -12,12 +12,12 @@ if [ -z "${PREFIX}" ]; then
 fi
 
 BIN_PATH="${PREFIX}/bin"
-SHARE_PATH="${PREFIX}/share/python-build"
+SHARE_PATH="${PREFIX}/share/chain-build"
 
 mkdir -p "$BIN_PATH" "$SHARE_PATH"
 
 install -p bin/* "$BIN_PATH"
-for share in share/python-build/*; do
+for share in share/chain-build/*; do
   if [ -d "$share" ]; then
     cp -RPp "$share" "$SHARE_PATH"
   else

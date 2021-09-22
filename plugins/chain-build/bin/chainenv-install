@@ -1,42 +1,42 @@
 #!/usr/bin/env bash
 #
-# Summary: Install a Python version using python-build
+# Summary: Install a Python version using chain-build
 #
-# Usage: pyenv install [-f] [-kvp] <version>
-#        pyenv install [-f] [-kvp] <definition-file>
-#        pyenv install -l|--list
-#        pyenv install --version
+# Usage: chainenv install [-f] [-kvp] <version>
+#        chainenv install [-f] [-kvp] <definition-file>
+#        chainenv install -l|--list
+#        chainenv install --version
 #
 #   -l/--list          List all available versions
 #   -f/--force         Install even if the version appears to be installed already
 #   -s/--skip-existing Skip if the version appears to be installed already
 #
-#   python-build options:
+#   chain-build options:
 #
-#   -k/--keep          Keep source tree in $PYENV_BUILD_ROOT after installation
-#                      (defaults to $PYENV_ROOT/sources)
+#   -k/--keep          Keep source tree in $CHAINENV_BUILD_ROOT after installation
+#                      (defaults to $CHAINENV_ROOT/sources)
 #   -p/--patch         Apply a patch from stdin before building
 #   -v/--verbose       Verbose mode: print compilation status to stdout
-#   --version          Show version of python-build
+#   --version          Show version of chain-build
 #   -g/--debug         Build a debug version
 #
 # For detailed information on installing Python versions with
-# python-build, including a list of environment variables for adjusting
-# compilation, see: https://github.com/pyenv/pyenv#readme
+# chain-build, including a list of environment variables for adjusting
+# compilation, see: https://github.com/chainenv/chainenv#readme
 #
 set -e
-[ -n "$PYENV_DEBUG" ] && set -x
+[ -n "$CHAINENV_DEBUG" ] && set -x
 
-# Add `share/python-build/` directory from each pyenv plugin to the list of
+# Add `share/chain-build/` directory from each chainenv plugin to the list of
 # paths where build definitions are looked up.
 shopt -s nullglob
-for plugin_path in "$PYENV_ROOT"/plugins/*/share/python-build; do
-  PYTHON_BUILD_DEFINITIONS="${PYTHON_BUILD_DEFINITIONS}:${plugin_path}"
+for plugin_path in "$CHAINENV_ROOT"/plugins/*/share/chain-build; do
+  CHAIN_BUILD_DEFINITIONS="${CHAIN_BUILD_DEFINITIONS}:${plugin_path}"
 done
-export PYTHON_BUILD_DEFINITIONS
+export CHAIN_BUILD_DEFINITIONS
 shopt -u nullglob
 
-# Provide pyenv completions
+# Provide chainenv completions
 if [ "$1" = "--complete" ]; then
   echo --list
   echo --force
@@ -46,20 +46,20 @@ if [ "$1" = "--complete" ]; then
   echo --verbose
   echo --version
   echo --debug
-  exec python-build --definitions
+  exec chain-build --definitions
 fi
 
 # Load shared library functions
-eval "$(python-build --lib)"
+eval "$(chain-build --lib)"
 
 usage() {
-  pyenv-help install 2>/dev/null
+  chainenv-help install 2>/dev/null
   [ -z "$1" ] || exit "$1"
 }
 
 definitions() {
   local query="$1"
-  python-build --definitions | $(type -P ggrep grep | head -1) -F "$query" || true
+  chain-build --definitions | $(type -P ggrep grep | head -1) -F "$query" || true
 }
 
 indent() {
@@ -91,7 +91,7 @@ for option in "${OPTIONS[@]}"; do
     SKIP_EXISTING=true
     ;;
   "k" | "keep" )
-    [ -n "${PYENV_BUILD_ROOT}" ] || PYENV_BUILD_ROOT="${PYENV_ROOT}/sources"
+    [ -n "${CHAINENV_BUILD_ROOT}" ] || CHAINENV_BUILD_ROOT="${CHAINENV_ROOT}/sources"
     ;;
   "v" | "verbose" )
     VERBOSE="-v"
@@ -103,7 +103,7 @@ for option in "${OPTIONS[@]}"; do
     DEBUG="-g"
     ;;
   "version" )
-    exec python-build --version
+    exec chain-build --version
     ;;
   * )
     usage 1 >&2
@@ -117,10 +117,10 @@ unset VERSION_NAME
 
 # The first argument contains the definition to install. If the
 # argument is missing, try to install whatever local app-specific
-# version is specified by pyenv. Show usage instructions if a local
+# version is specified by chainenv. Show usage instructions if a local
 # version is not specified.
 DEFINITION="${ARGUMENTS[0]}"
-[ -n "$DEFINITION" ] || DEFINITION="$(pyenv-local 2>/dev/null || true)"
+[ -n "$DEFINITION" ] || DEFINITION="$(chainenv-local 2>/dev/null || true)"
 [ -n "$DEFINITION" ] || usage 1 >&2
 
 # Define `before_install` and `after_install` functions that allow
@@ -139,7 +139,7 @@ after_install() {
 }
 
 OLDIFS="$IFS"
-IFS=$'\n' scripts=(`pyenv-hooks install`)
+IFS=$'\n' scripts=(`chainenv-hooks install`)
 IFS="$OLDIFS"
 for script in "${scripts[@]}"; do source "$script"; done
 
@@ -148,7 +148,7 @@ for script in "${scripts[@]}"; do source "$script"; done
 # compute the installation prefix.
 [ -n "$VERSION_NAME" ] || VERSION_NAME="${DEFINITION##*/}"
 [ -n "$DEBUG" ] && VERSION_NAME="${VERSION_NAME}-debug"
-PREFIX="${PYENV_ROOT}/versions/${VERSION_NAME}"
+PREFIX="${CHAINENV_ROOT}/versions/${VERSION_NAME}"
 
 [ -d "${PREFIX}" ] && PREFIX_EXISTS=1
 
@@ -156,7 +156,7 @@ PREFIX="${PYENV_ROOT}/versions/${VERSION_NAME}"
 # the --force option was specified.
 if [ -d "${PREFIX}/bin" ]; then
   if [ -z "$FORCE" ] && [ -z "$SKIP_EXISTING" ]; then
-    echo "pyenv: $PREFIX already exists" >&2
+    echo "chainenv: $PREFIX already exists" >&2
     read -p "continue with installation? (y/N) "
 
     case "$REPLY" in
@@ -171,30 +171,30 @@ if [ -d "${PREFIX}/bin" ]; then
   fi
 fi
 
-# If PYENV_BUILD_ROOT is set, always pass keep options to python-build.
-if [ -n "${PYENV_BUILD_ROOT}" ]; then
-  export PYTHON_BUILD_BUILD_PATH="${PYENV_BUILD_ROOT}/${VERSION_NAME}"
+# If CHAINENV_BUILD_ROOT is set, always pass keep options to chain-build.
+if [ -n "${CHAINENV_BUILD_ROOT}" ]; then
+  export CHAIN_BUILD_BUILD_PATH="${CHAINENV_BUILD_ROOT}/${VERSION_NAME}"
   KEEP="-k"
 fi
 
-# Set PYTHON_BUILD_CACHE_PATH to $PYENV_ROOT/cache, if the directory
+# Set CHAIN_BUILD_CACHE_PATH to $CHAINENV_ROOT/cache, if the directory
 # exists and the variable is not already set.
-if [ -z "${PYTHON_BUILD_CACHE_PATH}" ] && [ -d "${PYENV_ROOT}/cache" ]; then
-  export PYTHON_BUILD_CACHE_PATH="${PYENV_ROOT}/cache"
+if [ -z "${CHAIN_BUILD_CACHE_PATH}" ] && [ -d "${CHAINENV_ROOT}/cache" ]; then
+  export CHAIN_BUILD_CACHE_PATH="${CHAINENV_ROOT}/cache"
 fi
 
-if [ -z "${PYENV_BOOTSTRAP_VERSION}" ]; then
+if [ -z "${CHAINENV_BOOTSTRAP_VERSION}" ]; then
   case "${VERSION_NAME}" in
   [23]"."* )
-    # Default PYENV_VERSION to the friendly Python version. (The
+    # Default CHAINENV_VERSION to the friendly Python version. (The
     # CPython installer requires an existing Python installation to run. An
     # unsatisfied local .python-version file can cause the installer to
     # fail.)
     for version_info in "${VERSION_NAME%-dev}" "${VERSION_NAME%.*}" "${VERSION_NAME%%.*}"; do
       # Anaconda's `curl` doesn't work on platform where `/etc/pki/tls/certs/ca-bundle.crt` isn't available (e.g. Debian)
-      for version in $(pyenv-whence "python${version_info}" 2>/dev/null || true); do
+      for version in $(chainenv-whence "python${version_info}" 2>/dev/null || true); do
         if [[ "${version}" != "anaconda"* ]] && [[ "${version}" != "miniconda"* ]]; then
-          PYENV_BOOTSTRAP_VERSION="${version}"
+          CHAINENV_BOOTSTRAP_VERSION="${version}"
           break 2
         fi
       done
@@ -202,33 +202,33 @@ if [ -z "${PYENV_BOOTSTRAP_VERSION}" ]; then
     ;;
   "pypy"*"-dev" | "pypy"*"-src" )
     # PyPy/PyPy3 requires existing Python 2.7 to build
-    if [ -n "${PYENV_RPYTHON_VERSION}" ]; then
-      PYENV_BOOTSTRAP_VERSION="${PYENV_RPYTHON_VERSION}"
+    if [ -n "${CHAINENV_RPYTHON_VERSION}" ]; then
+      CHAINENV_BOOTSTRAP_VERSION="${CHAINENV_RPYTHON_VERSION}"
     else
-      for version in $(pyenv-versions --bare | sort -r); do
+      for version in $(chainenv-versions --bare | sort -r); do
         if [[ "${version}" == "2.7"* ]]; then
-          PYENV_BOOTSTRAP_VERSION="$version"
+          CHAINENV_BOOTSTRAP_VERSION="$version"
           break
         fi
       done
     fi
-    if [ -n "$PYENV_BOOTSTRAP_VERSION" ]; then
+    if [ -n "$CHAINENV_BOOTSTRAP_VERSION" ]; then
       for dep in curses genc pycparser; do
-        if ! PYENV_VERSION="$PYENV_BOOTSTRAP_VERSION" pyenv-exec python -c "import ${dep}" 1>/dev/null 2>&1; then
-          echo "pyenv-install: $VERSION_NAME: PyPy requires \`${dep}' in $PYENV_BOOTSTRAP_VERSION to build from source." >&2
+        if ! CHAINENV_VERSION="$CHAINENV_BOOTSTRAP_VERSION" chainenv-exec python -c "import ${dep}" 1>/dev/null 2>&1; then
+          echo "chainenv-install: $VERSION_NAME: PyPy requires \`${dep}' in $CHAINENV_BOOTSTRAP_VERSION to build from source." >&2
           exit 1
         fi
       done
     else
-      echo "pyenv-install: $VERSION_NAME: PyPy requires Python 2.7 to build from source." >&2
+      echo "chainenv-install: $VERSION_NAME: PyPy requires Python 2.7 to build from source." >&2
       exit 1
     fi
     ;;
   esac
 fi
 
-if [ -n "${PYENV_BOOTSTRAP_VERSION}" ]; then
-  export PYENV_VERSION="${PYENV_BOOTSTRAP_VERSION}"
+if [ -n "${CHAINENV_BOOTSTRAP_VERSION}" ]; then
+  export CHAINENV_VERSION="${CHAINENV_BOOTSTRAP_VERSION}"
 fi
 
 # Execute `before_install` hooks.
@@ -241,9 +241,9 @@ cleanup() {
 
 trap cleanup SIGINT
 
-# Invoke `python-build` and record the exit status in $STATUS.
+# Invoke `chain-build` and record the exit status in $STATUS.
 STATUS=0
-python-build $KEEP $VERBOSE $HAS_PATCH $DEBUG "$DEFINITION" "$PREFIX" || STATUS="$?"
+chain-build $KEEP $VERBOSE $HAS_PATCH $DEBUG "$DEFINITION" "$PREFIX" || STATUS="$?"
 
 # Display a more helpful message if the definition wasn't found.
 if [ "$STATUS" == "2" ]; then
@@ -255,12 +255,12 @@ if [ "$STATUS" == "2" ]; then
       echo "$candidates" | indent
     fi
     echo
-    echo "See all available versions with \`pyenv install --list'."
+    echo "See all available versions with \`chainenv install --list'."
     echo
-    echo -n "If the version you need is missing, try upgrading pyenv"
+    echo -n "If the version you need is missing, try upgrading chainenv"
     if [ "$here" != "${here#$(brew --prefix 2>/dev/null)}" ]; then
       printf ":\n\n"
-      echo "  brew update && brew upgrade pyenv"
+      echo "  brew update && brew upgrade chainenv"
     elif [ -d "${here}/.git" ]; then
       printf ":\n\n"
       echo "  cd ${here} && git pull && cd -"
@@ -273,9 +273,9 @@ fi
 # Execute `after_install` hooks.
 for hook in "${after_hooks[@]}"; do eval "$hook"; done
 
-# Run `pyenv-rehash` after a successful installation.
+# Run `chainenv-rehash` after a successful installation.
 if [ "$STATUS" == "0" ]; then
-  pyenv-rehash
+  chainenv-rehash
 else
   cleanup
 fi
