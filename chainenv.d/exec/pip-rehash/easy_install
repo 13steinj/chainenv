@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -e
+[ -n "$CHAINENV_DEBUG" ] && set -x
+
+# Remove chainenv-pip-rehash/libexec from PATH to avoid infinite loops in `chainenv-which` (yyuu/chainenv#146)
+_PATH=":${PATH}:"
+_HERE="$(dirname "${BASH_SOURCE[0]}")" # remove this from PATH
+_PATH="${_PATH//:${_HERE}:/:}"
+_PATH="${_PATH#:}"
+_PATH="${_PATH%:}"
+PATH="${_PATH}"
+
+CHAINENV_COMMAND_PATH="$(chainenv-which "${CHAINENV_REHASH_REAL_COMMAND}")"
+CHAINENV_BIN_PATH="${CHAINENV_COMMAND_PATH%/*}"
+
+export PATH="${CHAINENV_BIN_PATH}:${PATH}"
+
+STATUS=0
+"$CHAINENV_COMMAND_PATH" "$@" || STATUS="$?"
+
+# Run `chainenv-rehash` after a successful installation.
+if [ "$STATUS" == "0" ]; then
+  chainenv-rehash
+fi
+
+exit "$STATUS"

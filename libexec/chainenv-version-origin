@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Summary: Explain how the current Python version is set
+set -e
+[ -n "$CHAINENV_DEBUG" ] && set -x
+
+unset CHAINENV_VERSION_ORIGIN
+
+OLDIFS="$IFS"
+IFS=$'\n' scripts=(`chainenv-hooks version-origin`)
+IFS="$OLDIFS"
+for script in "${scripts[@]}"; do
+  source "$script"
+done
+
+if [ -n "$CHAINENV_VERSION_ORIGIN" ]; then
+  echo "$CHAINENV_VERSION_ORIGIN"
+elif [ -n "$CHAINENV_VERSION" ]; then
+  echo "CHAINENV_VERSION environment variable"
+else
+  chainenv-version-file
+fi

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#
+# Summary: Run an executable with the selected Python version
+#
+# Usage: chainenv exec <command> [arg1 arg2...]
+#
+# Runs an executable by first preparing PATH so that the selected Python
+# version's `bin' directory is at the front.
+#
+# For example, if the currently selected Python version is 2.7.6:
+#   chainenv exec pip install -rrequirements.txt
+#
+# is equivalent to:
+#   PATH="$CHAINENV_ROOT/versions/2.7.6/bin:$PATH" pip install -rrequirements.txt
+
+set -e
+[ -n "$CHAINENV_DEBUG" ] && set -x
+
+# Provide chainenv completions
+if [ "$1" = "--complete" ]; then
+  exec chainenv-shims --short
+fi
+
+CHAINENV_VERSION="$(chainenv-version-name)"
+CHAINENV_COMMAND="$1"
+
+if [ -z "$CHAINENV_COMMAND" ]; then
+  chainenv-help --usage exec >&2
+  exit 1
+fi
+
+export CHAINENV_VERSION
+CHAINENV_COMMAND_PATH="$(chainenv-which "$CHAINENV_COMMAND")"
+CHAINENV_BIN_PATH="${CHAINENV_COMMAND_PATH%/*}"
+
+OLDIFS="$IFS"
+IFS=$'\n' scripts=(`chainenv-hooks exec`)
+IFS="$OLDIFS"
+for script in "${scripts[@]}"; do
+  source "$script"
+done
+
+shift 1
+if [ "${CHAINENV_BIN_PATH#${CHAINENV_ROOT}}" != "${CHAINENV_BIN_PATH}" ]; then
+  # Only add to $PATH for non-system version.
+  export PATH="${CHAINENV_BIN_PATH}:${PATH}"
+fi
+exec "$CHAINENV_COMMAND_PATH" "$@"

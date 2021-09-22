@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Summary: List existing chainenv shims
+# Usage: chainenv shims [--short]
+
+set -e
+[ -n "$CHAINENV_DEBUG" ] && set -x
+
+# Provide chainenv completions
+if [ "$1" = "--complete" ]; then
+  echo --short
+  exit
+fi
+
+shopt -s nullglob
+
+for command in "${CHAINENV_ROOT}/shims/"*; do
+  if [ "$1" = "--short" ]; then
+    echo "${command##*/}"
+  else
+    echo "$command"
+  fi
+done | sort

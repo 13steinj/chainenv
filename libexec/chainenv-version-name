@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Summary: Show the current Python version
+set -e
+[ -n "$CHAINENV_DEBUG" ] && set -x
+
+if [ -z "$CHAINENV_VERSION" ]; then
+  CHAINENV_VERSION_FILE="$(chainenv-version-file)"
+  CHAINENV_VERSION="$(chainenv-version-file-read "$CHAINENV_VERSION_FILE" || true)"
+fi
+
+OLDIFS="$IFS"
+IFS=$'\n' scripts=(`chainenv-hooks version-name`)
+IFS="$OLDIFS"
+for script in "${scripts[@]}"; do
+  source "$script"
+done
+
+if [ -z "$CHAINENV_VERSION" ] || [ "$CHAINENV_VERSION" = "system" ]; then
+  echo "system"
+  exit
+fi
+
+version_exists() {
+  local version="$1"
+  [ -d "${CHAINENV_ROOT}/versions/${version}" ]
+}
+
+versions=()
+OLDIFS="$IFS"
+{ IFS=:
+  any_not_installed=0
+  for version in ${CHAINENV_VERSION}; do
+    if version_exists "$version" || [ "$version" = "system" ]; then
+      versions=("${versions[@]}" "${version}")
+    elif version_exists "${version#python-}"; then
+      versions=("${versions[@]}" "${version#python-}")
+    else
+      echo "chainenv: version \`$version' is not installed (set by $(chainenv-version-origin))" >&2
+      any_not_installed=1
+    fi
+  done
+}
+IFS="$OLDIFS"
+
+OLDIFS="$IFS"
+{ IFS=:
+  echo "${versions[*]}"
+}
+IFS="$OLDIFS"
+
+if [ "$any_not_installed" = 1 ]; then
+  exit 1
+fi

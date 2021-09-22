@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -e
+
+if [ "$1" = "--debug" ]; then
+  export CHAINENV_DEBUG=1
+  shift
+fi
+
+if [ -n "$CHAINENV_DEBUG" ]; then
+  # https://wiki-dev.bash-hackers.org/scripting/debuggingtips#making_xtrace_more_useful
+  export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+  set -x
+fi
+
+abort() {
+  { if [ "$#" -eq 0 ]; then cat -
+    else echo "chainenv: $*"
+    fi
+  } >&2
+  exit 1
+}
+
+if enable -f "${BASH_SOURCE%/*}"/../libexec/chainenv-realpath.dylib realpath 2>/dev/null; then
+  abs_dirname() {
+    local path
+    path="$(realpath "$1")"
+    echo "${path%/*}"
+  }
+else
+  [ -z "$CHAINENV_NATIVE_EXT" ] || abort "failed to load \`realpath' builtin"
+
+  READLINK=$(type -P greadlink readlink | head -1)
+  [ -n "$READLINK" ] || abort "cannot find readlink - are you missing GNU coreutils?"
+
+  resolve_link() {
+    $READLINK "$1"
+  }
+
+  abs_dirname() {
+    local path="$1"
+
+    # Use a subshell to avoid changing the current path
+    (
+    while [ -n "$path" ]; do
+      cd_path="${path%/*}"
+      if [[ "$cd_path" != "$path" ]]; then
+        cd "$cd_path"
+      fi
+      name="${path##*/}"
+      path="$(resolve_link "$name" || true)"
+    done
+
+    echo "$PWD"
+    )
+  }
+fi
+
+if [ -z "${CHAINENV_ROOT}" ]; then
+  CHAINENV_ROOT="${HOME}/.chainenv"
+else
+  CHAINENV_ROOT="${CHAINENV_ROOT%/}"
+fi
+export CHAINENV_ROOT
+
+if [ -z "${CHAINENV_DIR}" ]; then
+  CHAINENV_DIR="$PWD"
+fi
+
+if [ ! -d "$CHAINENV_DIR" ] || [ ! -e "$CHAINENV_DIR" ]; then
+  abort "cannot change working directory to \`$CHAINENV_DIR'"
+fi
+
+CHAINENV_DIR=$(cd "$CHAINENV_DIR" && echo "$PWD")
+export CHAINENV_DIR
+
+
+shopt -s nullglob
+
+bin_path="$(abs_dirname "$0")"
+for plugin_bin in "${bin_path%/*}"/plugins/*/bin; do
+  PATH="${plugin_bin}:${PATH}"
+done
+for plugin_bin in "${CHAINENV_ROOT}"/plugins/*/bin; do
+  PATH="${plugin_bin}:${PATH}"
+done
+export PATH="${bin_path}:${PATH}"
+
+CHAINENV_HOOK_PATH="${CHAINENV_HOOK_PATH}:${CHAINENV_ROOT}/chainenv.d"
+if [ "${bin_path%/*}" != "$CHAINENV_ROOT" ]; then
+  # Add chainenv's own `chainenv.d` unless chainenv was cloned to CHAINENV_ROOT
+  CHAINENV_HOOK_PATH="${CHAINENV_HOOK_PATH}:${bin_path%/*}/chainenv.d"
+fi
+CHAINENV_HOOK_PATH="${CHAINENV_HOOK_PATH}:/usr/local/etc/chainenv.d:/etc/chainenv.d:/usr/lib/chainenv/hooks"
+for plugin_hook in "${CHAINENV_ROOT}/plugins/"*/etc/chainenv.d; do
+  CHAINENV_HOOK_PATH="${CHAINENV_HOOK_PATH}:${plugin_hook}"
+done
+CHAINENV_HOOK_PATH="${CHAINENV_HOOK_PATH#:}"
+export CHAINENV_HOOK_PATH
+
+shopt -u nullglob
+
+
+command="$1"
+case "$command" in
+"" )
+  { chainenv---version
+    chainenv-help
+  } | abort
+  ;;
+-v | --version )
+  exec chainenv---version
+  ;;
+-h | --help )
+  exec chainenv-help
+  ;;
+* )
+  command_path="$(command -v "chainenv-$command" || true)"
+  if [ -z "$command_path" ]; then
+    if [ "$command" == "shell" ]; then
+      abort "shell integration not enabled. Run \`chainenv init' for instructions."
+    else
+      abort "no such command \`$command'"
+    fi
+  fi
+
+  shift 1
+  if [ "$1" = --help ]; then
+    if [[ "$command" == "sh-"* ]]; then
+      echo "chainenv help \"$command\""
+    else
+      exec chainenv-help "$command"
+    fi
+  else
+    exec "$command_path" "$@"
+  fi
+  ;;
+esac

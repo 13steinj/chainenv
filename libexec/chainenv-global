@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# Summary: Set or show the global Python version(s)
+#
+# Usage: chainenv global <version> <version2> <..>
+#
+# Sets the global Python version(s). You can override the global version at
+# any time by setting a directory-specific version with `chainenv local'
+# or by setting the `CHAINENV_VERSION' environment variable.
+#
+# <version> can be specified multiple times and should be a version
+# tag known to chainenv.  The special version string `system' will use
+# your default system Python.  Run `chainenv versions' for a list of
+# available Python versions.
+#
+# Example: To enable the python2.7 and python3.7 shims to find their
+#          respective executables you could set both versions with:
+#
+# 'chainenv global 3.7.0 2.7.15'
+#
+
+
+set -e
+[ -n "$CHAINENV_DEBUG" ] && set -x
+
+# Provide chainenv completions
+if [ "$1" = "--complete" ]; then
+  echo system
+  exec chainenv-versions --bare
+fi
+
+versions=("$@")
+CHAINENV_VERSION_FILE="${CHAINENV_ROOT}/version"
+
+if [ -n "$versions" ]; then
+  chainenv-version-file-write "$CHAINENV_VERSION_FILE" "${versions[@]}"
+else
+  OLDIFS="$IFS"
+  IFS=: versions=($(
+    chainenv-version-file-read "$CHAINENV_VERSION_FILE" ||
+    chainenv-version-file-read "${CHAINENV_ROOT}/global" ||
+    chainenv-version-file-read "${CHAINENV_ROOT}/default" ||
+    echo system
+  ))
+  IFS="$OLDIFS"
+  for version in "${versions[@]}"; do
+    echo "$version"
+  done
+fi

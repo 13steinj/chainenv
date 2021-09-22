@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+#
+# Summary: Set or show the shell-specific Python version
+#
+# Usage: chainenv shell <version>...
+#        chainenv shell -
+#        chainenv shell --unset
+#
+# Sets a shell-specific Python version by setting the `CHAINENV_VERSION'
+# environment variable in your shell. This version overrides local
+# application-specific versions and the global version.
+#
+# <version> should be a string matching a Python version known to chainenv.
+# The special version string `system' will use your default system Python.
+# Run `chainenv versions' for a list of available Python versions.
+#
+# When `-` is passed instead of the version string, the previously set
+# version will be restored. With `--unset`, the `CHAINENV_VERSION`
+# environment variable gets unset, restoring the environment to the
+# state before the first `chainenv shell` call.
+
+set -e
+[ -n "$CHAINENV_DEBUG" ] && set -x
+
+# Provide chainenv completions
+if [ "$1" = "--complete" ]; then
+  echo --unset
+  echo system
+  exec chainenv-versions --bare
+fi
+
+versions=("$@")
+shell="$(basename "${CHAINENV_SHELL:-$SHELL}")"
+
+if [ -z "$versions" ]; then
+  if [ -z "$CHAINENV_VERSION" ]; then
+    echo "chainenv: no shell-specific version configured" >&2
+    exit 1
+  else
+    echo 'echo "$CHAINENV_VERSION"'
+    exit
+  fi
+fi
+
+if [ "$versions" = "--unset" ]; then
+  case "$shell" in
+  fish )
+    echo 'set -gu CHAINENV_VERSION_OLD "$CHAINENV_VERSION"'
+    echo "set -e CHAINENV_VERSION"
+    ;;
+  * )
+    echo 'CHAINENV_VERSION_OLD="${CHAINENV_VERSION-}"'
+    echo "unset CHAINENV_VERSION"
+    ;;
+  esac
+  exit
+fi
+
+if [ "$versions" = "-" ]; then
+  case "$shell" in
+  fish )
+    cat <<EOS
+if set -q CHAINENV_VERSION_OLD
+  if [ -n "\$CHAINENV_VERSION_OLD" ]
+    set CHAINENV_VERSION_OLD_ "\$CHAINENV_VERSION"
+    set -gx CHAINENV_VERSION "\$CHAINENV_VERSION_OLD"
+    set -gu CHAINENV_VERSION_OLD "\$CHAINENV_VERSION_OLD_"
+    set -e CHAINENV_VERSION_OLD_
+  else
+    set -gu CHAINENV_VERSION_OLD "\$CHAINENV_VERSION"
+    set -e CHAINENV_VERSION
+  end
+else
+  echo "chainenv: CHAINENV_VERSION_OLD is not set" >&2
+  false
+end
+EOS
+    ;;
+  * )
+    cat <<EOS
+if [ -n "\${CHAINENV_VERSION_OLD+x}" ]; then
+  if [ -n "\$CHAINENV_VERSION_OLD" ]; then
+    CHAINENV_VERSION_OLD_="\$CHAINENV_VERSION"
+    export CHAINENV_VERSION="\$CHAINENV_VERSION_OLD"
+    CHAINENV_VERSION_OLD="\$CHAINENV_VERSION_OLD_"
+    unset CHAINENV_VERSION_OLD_
+  else
+    CHAINENV_VERSION_OLD="\$CHAINENV_VERSION"
+    unset CHAINENV_VERSION
+  fi
+else
+  echo "chainenv: CHAINENV_VERSION_OLD is not set" >&2
+  false
+fi
+EOS
+    ;;
+  esac
+  exit
+fi
+
+# Make sure the specified version is installed.
+if chainenv-prefix "${versions[@]}" >/dev/null; then
+  OLDIFS="$IFS"
+  IFS=: version="${versions[*]}"
+  IFS="$OLDIFS"
+  if [ "$version" != "$CHAINENV_VERSION" ]; then
+    case "$shell" in
+    fish )
+      echo 'set -gu CHAINENV_VERSION_OLD "$CHAINENV_VERSION"'
+      echo "set -gx CHAINENV_VERSION \"$version\""
+      ;;
+    * )
+      echo 'CHAINENV_VERSION_OLD="${CHAINENV_VERSION-}"'
+      echo "export CHAINENV_VERSION=\"${version}\""
+      ;;
+    esac
+  fi
+else
+  echo "false"
+  exit 1
+fi
