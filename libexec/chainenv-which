@@ -49,7 +49,7 @@ IFS="$OLDIFS"
 
 for version in "${versions[@]}" "$system"; do
   if [ "$version" = "system" ]; then
-    PATH="$(remove_from_path "${CHAINENV_ROOT}/shims")"
+    PATH="$(remove_from_path "${CHAINENV_CONFIG_ROOT}/shims")"
     CHAINENV_COMMAND_PATH="$(command -v "$CHAINENV_COMMAND" || true)"
   else
     CHAINENV_COMMAND_PATH="${CHAINENV_ROOT}/versions/${version}/bin/${CHAINENV_COMMAND}"

@@ -9,8 +9,8 @@ target_dir="$1"
 find_local_version_file() {
   local root="$1"
   while ! [[ "$root" =~ ^//[^/]*$ ]]; do
-    if [ -f "${root}/.python-version" ]; then
-      echo "${root}/.python-version"
+    if [ -f "${root}/.chainenv-version" ]; then
+      echo "${root}/.chainenv-version"
       return 0
     fi
     [ -n "$root" ] || break
@@ -24,5 +24,5 @@ if [ -n "$target_dir" ]; then
 else
   find_local_version_file "$CHAINENV_DIR" || {
     [ "$CHAINENV_DIR" != "$PWD" ] && find_local_version_file "$PWD"
-  } || echo "${CHAINENV_ROOT}/version"
+  } || echo "${CHAINENV_CONFIG_ROOT}/version"
 fi

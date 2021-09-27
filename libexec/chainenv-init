@@ -159,17 +159,17 @@ function help_() {
 }
 
 function init_dirs() {
-  mkdir -p "${CHAINENV_ROOT}/"{shims,versions}
+  mkdir -p "${CHAINENV_CONFIG_ROOT}/"{shims,versions}
 }
 
 function print_path() {
   # Need to use the login shell rather than the current one
   case "$shell" in
     fish )
-      echo "set -gx PATH '${CHAINENV_ROOT}/shims' \$PATH"
+      echo "set -gx PATH '${CHAINENV_CONFIG_ROOT}/shims' \$PATH"
       ;;
     * )
-      echo 'export PATH="'${CHAINENV_ROOT}'/shims:${PATH}"'
+      echo 'export PATH="'${CHAINENV_CONFIG_ROOT}'/shims:${PATH}"'
       ;;
   esac
 }

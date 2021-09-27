@@ -1,29 +1,29 @@
 #!/usr/bin/env bash
 #
-# Summary: Set or show the local application-specific Python version(s)
+# Summary: Set or show the local application-specific toolchain version(s)
 #
 # Usage: chainenv local <version> <version2> <..>
 #        chainenv local --unset
 #
-# Sets the local application-specific Python version(s) by writing the
-# version name to a file named `.python-version'.
+# Sets the local application-specific toolchain version(s) by writing the
+# version name to a file named `.chainenv-version'.
 #
-# When you run a Python command, chainenv will look for a `.python-version'
+# When you run a toolchain command, chainenv will look for a `.chainenv-version'
 # file in the current directory and each parent directory. If no such
-# file is found in the tree, chainenv will use the global Python version
+# file is found in the tree, chainenv will use the global toolchain version
 # specified with `chainenv global'. A version specified with the
 # `CHAINENV_VERSION' environment variable takes precedence over local
 # and global versions.
 #
 # <version> can be specified multiple times and should be a version
 # tag known to chainenv.  The special version string `system' will use
-# your default system Python.  Run `chainenv versions' for a list of
-# available Python versions.
+# your default system toolchain.  Run `chainenv versions' for a list of
+# available toolchain versions.
 #
-# Example: To enable the python2.7 and python3.7 shims to find their
+# Example: To enable the gcc-11.2.0 and gcc-11.1.0 shims to find their
 #          respective executables you could set both versions with:
 #
-# 'chainenv local 3.7.0 2.7.15'
+# 'chainenv local 11.2.0 11.1.0'
 
 
 set -e
@@ -39,9 +39,9 @@ fi
 versions=("$@")
 
 if [ "$versions" = "--unset" ]; then
-  rm -f .python-version
+  rm -f .chainenv-version
 elif [ -n "$versions" ]; then
-  chainenv-version-file-write .python-version "${versions[@]}"
+  chainenv-version-file-write .chainenv-version "${versions[@]}"
 else
   if version_file="$(chainenv-version-file "$PWD")"; then
     IFS=: versions=($(chainenv-version-file-read "$version_file"))

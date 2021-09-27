@@ -4,7 +4,7 @@
 set -e
 [ -n "$CHAINENV_DEBUG" ] && set -x
 
-SHIM_PATH="${CHAINENV_ROOT}/shims"
+SHIM_PATH="${CHAINENV_CONFIG_ROOT}/shims"
 PROTOTYPE_SHIM_PATH="${SHIM_PATH}/.chainenv-shim"
 
 # Create the shims directory if it doesn't already exist.

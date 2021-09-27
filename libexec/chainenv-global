@@ -30,7 +30,7 @@ if [ "$1" = "--complete" ]; then
 fi
 
 versions=("$@")
-CHAINENV_VERSION_FILE="${CHAINENV_ROOT}/version"
+CHAINENV_VERSION_FILE="${CHAINENV_CONFIG_ROOT}/version"
 
 if [ -n "$versions" ]; then
   chainenv-version-file-write "$CHAINENV_VERSION_FILE" "${versions[@]}"
