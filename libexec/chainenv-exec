@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# Summary: Run an executable with the selected Python version
+# Summary: Run an executable with the selected toolchain
 #
 # Usage: chainenv exec <command> [arg1 arg2...]
 #
 # Runs an executable by first preparing PATH so that the selected Python
 # version's `bin' directory is at the front.
 #
-# For example, if the currently selected Python version is 2.7.6:
-#   chainenv exec pip install -rrequirements.txt
+# For example, if the currently selected toolchain is gcc-11.2.0:
+#   chainenv exec gcc -v
 #
 # is equivalent to:
-#   PATH="$CHAINENV_ROOT/versions/2.7.6/bin:$PATH" pip install -rrequirements.txt
+#   PATH="$CHAINENV_ROOT/versions/gcc-11.2.0/bin:$PATH" gcc -v
 
 set -e
 [ -n "$CHAINENV_DEBUG" ] && set -x
