@@ -1857,7 +1857,7 @@ unset IPV6
 CHAIN_BUILD_INSTALL_PREFIX="$(abs_dirname "$0")/.."
 
 IFS=: CHAIN_BUILD_DEFINITIONS=($CHAIN_BUILD_DEFINITIONS ${CHAIN_BUILD_ROOT:-$CHAIN_BUILD_INSTALL_PREFIX}/share/chain-build)
-IFS=: GCC_GIT_REPO_DIR=($GCC_GIT_REPO ${CHAIN_BUILD_ROOT:-$CHAIN_BUILD_INSTALL_PREFIX}/share/chain-build-gcc)
+IFS=: GCC_GIT_REPO_DIR=($GCC_GIT_REPO_DIR ${CHAIN_BUILD_ROOT:-$CHAIN_BUILD_INSTALL_PREFIX}/share/chain-build-gcc)
 IFS="$OLDIFS"
 GCC_GIT_REPO="git://gcc.gnu.org/git/gcc.git"
 GCC_GIT_REPO_TAG_PREFIX="releases"
@@ -2020,22 +2020,40 @@ if [ "/tmp" = "$TMP" ]; then
   cd "$TMP"
 fi
 
-git -C $GCC_GIT_REPO_DIR checkout "$GIT_TAG_RELEASE"
+git -C $GCC_GIT_REPO_DIR checkout "tags/$GIT_TAG_RELEASE"
 
-# this script needs to be run in the GCC directory, oddly. Not mentioned in installation instructions.
+# this script needs to be run in the GCC directory, oddly.
+# Not mentioned in installation instructions.
 pushd "$GCC_GIT_REPO_DIR"
 ./contrib/download_prerequisites
 popd
 
-$GCC_GIT_REPO_DIR/configure \
-  --enable-shared \
-  --prefix="${CHAINENV_ROOT}/versions/${RELEASE}"
-#  --disable-multilib --disable-bootstrap \
-#  --program-suffix="-$RELEASE_SUFFIX" \
+$GCC_GIT_REPO_DIR/configure --prefix="${CHAINENV_ROOT}/versions/${RELEASE}" \
+  --enable-shared
 
-# actually build GCC. Note, I don't care how powerful you think your computer is. It'll take a long time. also note:
-# the makefile is weird. These commands need to be separate, even if targets are assumed to be mutually exclusive
-make -j && make install && make clean
+# actually build GCC. Note, I don't care how powerful you think your computer
+# is. It'll take a long time. also note: the makefile is weird. These commands
+# need to be separate, even if targets are assumed to be mutually exclusive
+make -j && make install
+
+INSTALL_CODE=$?
+
+if [ $INSTALL_CODE -ne 0 ]; then
+  echo "failed install" >> /tmp/chainenv-log
+  exit $INSTALL_CODE
+fi
+
+# cleanup any prerequisites. If this isn't done future installations can fail,
+# because GCC doesn't clean these up by itself in any capacity, and the makefile
+# can short-circuit to a different version of the prerequisite than needed
+git -C $GCC_GIT_REPO_DIR clean -xdf
+
+make clean
+
+if [ $? -ne 0 ]; then
+  rm -rf "$TMP"
+  echo "cleaned via rm -rf as make clean failed"
+fi
 
 exit
 # Add an option to build a debug version of Python (#11)
