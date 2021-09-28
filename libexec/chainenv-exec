@@ -45,4 +45,11 @@ if [ "${CHAINENV_BIN_PATH#${CHAINENV_ROOT}}" != "${CHAINENV_BIN_PATH}" ]; then
   # Only add to $PATH for non-system version.
   export PATH="${CHAINENV_BIN_PATH}:${PATH}"
 fi
-exec "$CHAINENV_COMMAND_PATH" "$@"
+
+if [ "$CHAINENV_VERSION" == "system" ]; then
+  exec "$CHAINENV_COMMAND_PATH" "$@"
+else
+  CHAINENV_VERSION_PATH=$(dirname "$CHAINENV_BIN_PATH")
+  CHAINENV_LD_RUN_PATH=$(ls $CHAINENV_VERSION_PATH | grep -E "lib(|[0-9]+)$" | sort -r | awk -v prefix="$CHAINENV_VERSION_PATH/" '{print prefix $0}' | tr '\n' ':')
+  exec env LD_RUN_PATH="${LD_RUN_PATH:+${LD_RUN_PATH}:}${CHAINENV_LD_RUN_PATH%:}" "$CHAINENV_COMMAND_PATH" "$@"
+fi
