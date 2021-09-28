@@ -1829,12 +1829,11 @@ usage() {
 }
 
 list_git_versions() {
-  git -C $GCC_GIT_REPO_DIR tag -l --sort=-creatordate "$1*" | sed -e "s#^$1/##"
+  git ls-remote -t "$1" "$2*" | cut -f 2 | grep --invert "{}$" | sed "s#^refs/tags/$2/##"
 }
 
 list_definitions() {
-  ensure_repo
-  list_git_versions $GCC_GIT_REPO_TAG_PREFIX
+  list_git_versions $GCC_GIT_REPO $GCC_GIT_REPO_TAG_PREFIX | sort_versions | uniq
 #  { for DEFINITION_DIR in "${CHAIN_BUILD_DEFINITIONS[@]}"; do
 #      [ -d "$DEFINITION_DIR" ] && ls "$DEFINITION_DIR" | grep -xv patches
 #    done
@@ -1842,8 +1841,9 @@ list_definitions() {
 }
 
 sort_versions() {
-  sed 'h; s/[+-]/./g; s/.p\([[:digit:]]\)/.z.\1/; s/$/.z/; G; s/\n/ /' | \
-    LC_ALL=C sort -t. -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n | awk '{print $2}'
+  sed -r "s#([^-]+)-(.*)#\2-\1#" | sort -Vr | sed -r "s#([^-]+)-(.*)#\2-\1#"
+#  sed 'h; s/[+-]/./g; s/.p\([[:digit:]]\)/.z.\1/; s/$/.z/; G; s/\n/ /' | \
+#    LC_ALL=C sort -t. -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n | awk '{print $2}'
 }
 
 
@@ -1863,11 +1863,10 @@ GCC_GIT_REPO="git://gcc.gnu.org/git/gcc.git"
 GCC_GIT_REPO_TAG_PREFIX="releases"
 
 ensure_repo() {
-  if [ ! -d "${GCC_GIT_REPO_DIR[@]}" ]; then
-    git clone $GCC_GIT_REPO "${GCC_GIT_REPO_DIR[@]}"
-  else
-    git -C "${GCC_GIT_REPO_DIR[@]}" fetch --all --tags
+  if [ ! -d "$GCC_GIT_REPO_DIR" ]; then
+    git clone $GCC_GIT_REPO "$GCC_GIT_REPO_DIR"
   fi
+  git -C "$GCC_GIT_REPO_DIR" fetch -t
 }
 
 parse_options "$@"
@@ -1916,7 +1915,7 @@ RELEASE="${ARGUMENTS[0]}"
 GIT_TAG_RELEASE="releases/${RELEASE}"
 RELEASE_SUFFIX="${ARGUMENTS[0]#*-}"
 
-if [ -z $(list_git_versions "$GIT_TAG_RELEASE") ]; then
+if [ -z $(list_git_versions $GCC_GIT_REPO "$GIT_TAG_RELEASE") ]; then
   echo "chain-build: definition not found: ${GIT_TAG_RELEASE}" >&2
   exit 2
 fi
@@ -2019,6 +2018,8 @@ if [ "/tmp" = "$TMP" ]; then
   TMP=$(mktemp -d)
   cd "$TMP"
 fi
+
+ensure_repo
 
 git -C $GCC_GIT_REPO_DIR checkout "tags/$GIT_TAG_RELEASE"
 
